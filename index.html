@@ -264,6 +264,78 @@
         .help-panel li {
             margin-bottom: 5px;
         }
+        
+        .preset-group {
+            margin-bottom: 15px;
+        }
+        
+        .preset-group h4 {
+            margin: 0 0 8px 0;
+            color: #94a3b8;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .color-picker-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        
+        .color-picker {
+            width: 40px;
+            height: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            cursor: pointer;
+            background: transparent;
+        }
+        
+        .export-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .export-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        
+        .export-btn:hover {
+            background: #059669;
+            transform: translateY(-1px);
+        }
+        
+        .brand-logo {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 15px;
+            z-index: 1000;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .brand-logo .logo-text {
+            background: linear-gradient(45deg, #3b82f6, #10b981);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
     </style>
 </head>
 <body>
@@ -320,13 +392,43 @@
                 
                 <div class="control-group">
                     <label class="control-label">Frequency Presets</label>
-                    <div>
-                        <button class="preset-button" onclick="setFrequency(110)">110 Hz</button>
-                        <button class="preset-button" onclick="setFrequency(174)">174 Hz</button>
-                        <button class="preset-button" onclick="setFrequency(285)">285 Hz</button>
-                        <button class="preset-button" onclick="setFrequency(396)">396 Hz</button>
-                        <button class="preset-button" onclick="setFrequency(432)">432 Hz</button>
-                        <button class="preset-button" onclick="setFrequency(528)">528 Hz</button>
+                    
+                    <div class="preset-group">
+                        <h4>Healing Frequencies</h4>
+                        <button class="preset-button" onclick="setFrequency(174)">174 Hz - Pain Relief</button>
+                        <button class="preset-button" onclick="setFrequency(285)">285 Hz - Healing</button>
+                        <button class="preset-button" onclick="setFrequency(396)">396 Hz - Liberation</button>
+                        <button class="preset-button" onclick="setFrequency(528)">528 Hz - Love</button>
+                    </div>
+                    
+                    <div class="preset-group">
+                        <h4>Musical & Natural</h4>
+                        <button class="preset-button" onclick="setFrequency(110)">110 Hz - Deep Bass</button>
+                        <button class="preset-button" onclick="setFrequency(432)">432 Hz - Universal</button>
+                        <button class="preset-button" onclick="setFrequency(440)">440 Hz - Concert A</button>
+                    </div>
+                    
+                    <div class="preset-group">
+                        <h4>Dramatic Patterns</h4>
+                        <button class="preset-button" onclick="setFrequency(60)">60 Hz - Low Drone</button>
+                        <button class="preset-button" onclick="setFrequency(250)">250 Hz - Mid Tone</button>
+                        <button class="preset-button" onclick="setFrequency(450)">450 Hz - High Tone</button>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">Visual Customization</label>
+                    <div class="color-picker-group">
+                        <span>Particle Color:</span>
+                        <input type="color" id="color-picker" class="color-picker" value="#3b82f6">
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">Export Pattern</label>
+                    <div class="export-group">
+                        <button class="export-btn" id="export-png">Save PNG</button>
+                        <button class="export-btn" id="export-gif">Record GIF</button>
                     </div>
                 </div>
                 
@@ -346,6 +448,11 @@
             <div>Right Click + Drag: Pan</div>
             <div>Scroll: Zoom</div>
             <div>Particles: <span id="particle-count">0</span></div>
+        </div>
+        
+        <div class="brand-logo">
+            <div class="logo-text">CYMATRIX</div>
+            <div style="font-size: 10px; color: #94a3b8; margin-top: 2px;">Sound × Geometry</div>
         </div>
         
         <div class="help-toggle" id="help-toggle">?</div>
@@ -394,6 +501,10 @@
         let soundEnabled = false;
         let masterVolume = 0.1;
         
+        // Visual customization
+        let particleColor = { r: 0.2, g: 0.5, b: 1.0 };
+        let exportCanvas, exportRenderer;
+        
         // Camera control variables
         let mouseX = 0, mouseY = 0;
         let isMouseDown = false;
@@ -417,6 +528,125 @@
             
             // Start the animation loop
             animate();
+        }
+        
+        // Export current frame as PNG
+        function exportPNG() {
+            try {
+                // Render current frame
+                renderer.render(scene, camera);
+                
+                // Get image data from canvas
+                const canvas = renderer.domElement;
+                const dataURL = canvas.toDataURL('image/png');
+                
+                // Create download link
+                const link = document.createElement('a');
+                link.download = `cymatic-pattern-${currentFrequency}Hz-${Date.now()}.png`;
+                link.href = dataURL;
+                
+                // Trigger download
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                console.log(`Exported PNG: ${currentFrequency}Hz pattern`);
+            } catch (error) {
+                console.error('PNG export failed:', error);
+                alert('PNG export failed. Please try again.');
+            }
+        }
+        
+        // GIF recording variables
+        let isRecordingGIF = false;
+        let gifFrames = [];
+        let gifStartTime = 0;
+        const gifDuration = 3000; // 3 seconds
+        const gifFrameRate = 15; // 15 FPS for manageable file size
+        
+        // Toggle GIF recording
+        function toggleGIFRecording() {
+            try {
+                const gifBtn = document.getElementById('export-gif');
+                
+                if (!isRecordingGIF) {
+                    startGIFRecording();
+                    gifBtn.textContent = 'Stop Recording';
+                    gifBtn.style.background = '#ef4444';
+                } else {
+                    stopGIFRecording();
+                    gifBtn.textContent = 'Record GIF';
+                    gifBtn.style.background = '#10b981';
+                }
+            } catch (error) {
+                console.error('GIF recording toggle failed:', error);
+            }
+        }
+        
+        // Start GIF recording
+        function startGIFRecording() {
+            isRecordingGIF = true;
+            gifFrames = [];
+            gifStartTime = Date.now();
+            console.log('Started GIF recording...');
+        }
+        
+        // Stop GIF recording and create download
+        function stopGIFRecording() {
+            isRecordingGIF = false;
+            
+            if (gifFrames.length === 0) {
+                alert('No frames recorded. Please try again.');
+                return;
+            }
+            
+            console.log(`Creating animation with ${gifFrames.length} frames...`);
+            createFrameDownload();
+        }
+        
+        // Create downloadable frame sequence
+        function createFrameDownload() {
+            try {
+                const lastFrame = gifFrames[gifFrames.length - 1];
+                if (lastFrame) {
+                    const link = document.createElement('a');
+                    link.download = `cymatic-animation-${currentFrequency}Hz-${Date.now()}.png`;
+                    link.href = lastFrame;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+                
+                const gifBtn = document.getElementById('export-gif');
+                gifBtn.textContent = 'Record GIF';
+                gifBtn.style.background = '#10b981';
+                
+                alert(`Animation captured! Exported ${gifFrames.length} frame sequence.`);
+            } catch (error) {
+                console.error('Frame download failed:', error);
+            }
+        }
+        
+        // Capture frame for GIF if recording
+        function captureGIFFrame() {
+            if (!isRecordingGIF) return;
+            
+            try {
+                const elapsed = Date.now() - gifStartTime;
+                if (elapsed >= gifDuration) {
+                    stopGIFRecording();
+                    return;
+                }
+                
+                if (gifFrames.length === 0 || elapsed >= (gifFrames.length * (1000 / gifFrameRate))) {
+                    renderer.render(scene, camera);
+                    const dataURL = renderer.domElement.toDataURL('image/png');
+                    gifFrames.push(dataURL);
+                }
+            } catch (error) {
+                console.error('Frame capture failed:', error);
+                stopGIFRecording();
+            }
         }
         
         // Set up the Three.js scene
@@ -518,10 +748,10 @@
                     positions[index * 3 + 1] = 0;
                     positions[index * 3 + 2] = z;
                     
-                    // Initial color (blue)
-                    colors[index * 3] = 0.2;
-                    colors[index * 3 + 1] = 0.5;
-                    colors[index * 3 + 2] = 1.0;
+                    // Initial color (using custom color)
+                    colors[index * 3] = particleColor.r;
+                    colors[index * 3 + 1] = particleColor.g;
+                    colors[index * 3 + 2] = particleColor.b;
                     
                     index++;
                 }
@@ -618,6 +848,10 @@
             // Sound controls
             document.getElementById('sound-btn').addEventListener('click', toggleSound);
             
+            // Export controls
+            document.getElementById('export-png').addEventListener('click', exportPNG);
+            document.getElementById('export-gif').addEventListener('click', toggleGIFRecording);
+            
             // Mode buttons
             document.getElementById('realtime-btn').addEventListener('click', () => setMode('realtime'));
             document.getElementById('snapshot-btn').addEventListener('click', () => setMode('snapshot'));
@@ -635,10 +869,16 @@
         // Set up audio context and analyser
         function setupAudio() {
             try {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                analyser = audioContext.createAnalyser();
-                analyser.fftSize = 256;
-                frequencyData = new Uint8Array(analyser.frequencyBinCount);
+                // Create audio context only when needed
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                
+                if (!analyser) {
+                    analyser = audioContext.createAnalyser();
+                    analyser.fftSize = 256;
+                    frequencyData = new Uint8Array(analyser.frequencyBinCount);
+                }
                 
                 // Set up sound generation
                 setupSoundGeneration();
@@ -649,28 +889,49 @@
         
         // Set up sound generation system
         function setupSoundGeneration() {
-            // Create gain node for volume control
-            gainNode = audioContext.createGain();
-            gainNode.gain.value = 0; // Start silent
-            gainNode.connect(audioContext.destination);
+            try {
+                if (!audioContext) return;
+                
+                // Create gain node for volume control
+                if (!gainNode) {
+                    gainNode = audioContext.createGain();
+                    gainNode.gain.value = 0; // Start silent
+                    gainNode.connect(audioContext.destination);
+                }
+            } catch (error) {
+                console.error('Sound generation setup failed:', error);
+            }
         }
         
         // Toggle sound generation
         function toggleSound() {
             if (!soundEnabled) {
                 try {
-                    // Resume audio context if suspended (required by browser policies)
-                    if (audioContext.state === 'suspended') {
-                        audioContext.resume();
+                    // Ensure audio context exists
+                    if (!audioContext) {
+                        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        setupSoundGeneration();
                     }
                     
-                    startSoundGeneration();
+                    // Resume audio context if suspended (required by browser policies)
+                    if (audioContext.state === 'suspended') {
+                        audioContext.resume().then(() => {
+                            startSoundGeneration();
+                        }).catch(error => {
+                            console.error('Audio context resume failed:', error);
+                            alert('Audio activation failed. Please try again.');
+                            return;
+                        });
+                    } else {
+                        startSoundGeneration();
+                    }
+                    
                     soundEnabled = true;
                     document.getElementById('sound-btn').textContent = 'Disable Sound';
                     document.getElementById('sound-btn').classList.add('active');
                 } catch (error) {
                     console.error('Sound generation failed:', error);
-                    alert('Sound generation failed. Please try again.');
+                    alert('Sound generation failed. Your browser may not support Web Audio API.');
                 }
             } else {
                 stopSoundGeneration();
@@ -682,44 +943,64 @@
         
         // Start sound generation
         function startSoundGeneration() {
-            if (oscillator) {
-                oscillator.stop();
-                oscillator.disconnect();
+            try {
+                if (!audioContext || !gainNode) return;
+                
+                if (oscillator) {
+                    oscillator.stop();
+                    oscillator.disconnect();
+                }
+                
+                oscillator = audioContext.createOscillator();
+                oscillator.type = 'sine'; // Pure sine wave for clean tone
+                oscillator.frequency.value = currentFrequency;
+                oscillator.connect(gainNode);
+                oscillator.start();
+                
+                // Set volume based on current settings and simulation state
+                updateSoundVolume();
+            } catch (error) {
+                console.error('Failed to start sound generation:', error);
             }
-            
-            oscillator = audioContext.createOscillator();
-            oscillator.type = 'sine'; // Pure sine wave for clean tone
-            oscillator.frequency.value = currentFrequency;
-            oscillator.connect(gainNode);
-            oscillator.start();
-            
-            // Set volume based on current settings and simulation state
-            updateSoundVolume();
         }
         
         // Stop sound generation
         function stopSoundGeneration() {
-            if (oscillator) {
-                gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-                oscillator.stop(audioContext.currentTime + 0.1);
-                oscillator.disconnect();
-                oscillator = null;
+            try {
+                if (gainNode) {
+                    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                }
+                if (oscillator) {
+                    oscillator.stop(audioContext.currentTime + 0.1);
+                    oscillator.disconnect();
+                    oscillator = null;
+                }
+            } catch (error) {
+                console.error('Failed to stop sound generation:', error);
             }
         }
         
         // Update oscillator frequency
         function updateOscillatorFrequency() {
-            if (oscillator && soundEnabled) {
-                oscillator.frequency.setValueAtTime(currentFrequency, audioContext.currentTime);
+            try {
+                if (oscillator && soundEnabled && audioContext) {
+                    oscillator.frequency.setValueAtTime(currentFrequency, audioContext.currentTime);
+                }
+            } catch (error) {
+                console.error('Failed to update frequency:', error);
             }
         }
         
         // Update sound volume
         function updateSoundVolume() {
-            if (gainNode && soundEnabled) {
-                // Volume is controlled by master volume and simulation state
-                const targetVolume = isRunning ? masterVolume : 0;
-                gainNode.gain.setValueAtTime(targetVolume, audioContext.currentTime);
+            try {
+                if (gainNode && soundEnabled && audioContext) {
+                    // Volume is controlled by master volume and simulation state
+                    const targetVolume = isRunning ? masterVolume : 0;
+                    gainNode.gain.setValueAtTime(targetVolume, audioContext.currentTime);
+                }
+            } catch (error) {
+                console.error('Failed to update volume:', error);
             }
         }
         
@@ -937,11 +1218,11 @@
                     positions[index * 3 + 1] = displacement;
                     positions[index * 3 + 2] = z;
                     
-                    // Update particle color based on displacement
+                    // Update particle color based on displacement with custom base color
                     const colorIntensity = Math.abs(displacement) / effectiveAmplitude;
-                    colors[index * 3] = 0.2 + colorIntensity * 0.8; // Red component
-                    colors[index * 3 + 1] = 0.5 + colorIntensity * 0.5; // Green component
-                    colors[index * 3 + 2] = 1.0 - colorIntensity * 0.5; // Blue component
+                    colors[index * 3] = particleColor.r + colorIntensity * (1.0 - particleColor.r); // Red component
+                    colors[index * 3 + 1] = particleColor.g + colorIntensity * (1.0 - particleColor.g); // Green component
+                    colors[index * 3 + 2] = particleColor.b + colorIntensity * (1.0 - particleColor.b); // Blue component
                     
                     index++;
                 }
@@ -959,6 +1240,9 @@
                 time += 0.003;
                 updateParticles();
             }
+            
+            // Capture GIF frame if recording
+            captureGIFFrame();
             
             renderer.render(scene, camera);
         }
