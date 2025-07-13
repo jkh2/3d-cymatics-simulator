@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Cymatics Simulator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            width: 300px;
+            z-index: 1000;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        #controls.collapsed {
+            width: 60px;
+            height: 60px;
+            padding: 15px;
+            overflow: hidden;
+        }
+        
+        .controls-content {
+            transition: opacity 0.3s ease;
+        }
+        
+        #controls.collapsed .controls-content {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .collapse-toggle {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid #3b82f6;
+            border-radius: 6px;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #3b82f6;
+            font-weight: bold;
+            font-size: 16px;
+            transition: all 0.2s;
+            z-index: 1001;
+        }
+        
+        .collapse-toggle:hover {
+            background: rgba(59, 130, 246, 0.4);
+            transform: scale(1.1);
+        }
+        
+        #controls.collapsed .collapse-toggle {
+            position: static;
+            margin: 0;
+        }
+        
+        #info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 15px;
+            z-index: 1000;
+            color: white;
+            font-size: 14px;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #e2e8f0;
+        }
+        
+        .slider {
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: #334155;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5);
+        }
+        
+        .slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5);
+        }
+        
+        .button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .button:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+        
+        .button:active {
+            transform: translateY(0);
+        }
+        
+        .button.active {
+            background: #10b981;
+        }
+        
+        .preset-button {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-right: 8px;
+            margin-bottom: 8px;
+            transition: all 0.2s;
+        }
+        
+        .preset-button:hover {
+            background: #4f46e5;
+            transform: translateY(-1px);
+        }
+        
+        .value-display {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 5px;
+        }
+        
+        .audio-status {
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        
+        .audio-status.active {
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid #10b981;
+            color: #10b981;
+        }
+        
+        .audio-status.inactive {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid #ef4444;
+            color: #ef4444;
+        }
+        
+        .help-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+        }
+        
+        .help-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            width: 350px;
+            z-index: 1001;
+            color: white;
+            font-size: 14px;
+            line-height: 1.5;
+            display: none;
+        }
+        
+        .help-panel h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #3b82f6;
+        }
+        
+        .help-panel ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        .help-panel li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="canvas-container"></div>
+        
+        <div id="controls">
+            <div class="collapse-toggle" id="collapse-toggle">−</div>
+            <div class="controls-content">
+                <h3 style="margin-top: 0; color: #3b82f6;">3D Cymatics Simulator</h3>
+                
+                <div class="control-group">
+                    <label class="control-label">Frequency (Hz)</label>
+                    <input type="range" id="frequency-slider" class="slider" min="20" max="500" value="100" step="1">
+                    <div class="value-display" id="frequency-value">100 Hz</div>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">Amplitude</label>
+                    <input type="range" id="amplitude-slider" class="slider" min="0.1" max="3.0" value="1.0" step="0.1">
+                    <div class="value-display" id="amplitude-value">1.0</div>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">Boundary Shape</label>
+                    <div>
+                        <button class="button active" id="plate-btn">Plate</button>
+                        <button class="button" id="sphere-btn">Sphere</button>
+                        <button class="button" id="cube-btn">Cube</button>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">Simulation</label>
+                    <div>
+                        <button class="button" id="start-btn">Start</button>
+                        <button class="button" id="pause-btn">Pause</button>
+                        <button class="button" id="reset-btn">Reset</button>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">Audio Input</label>
+                    <button class="button" id="audio-btn">Enable Microphone</button>
+                    <div class="audio-status inactive" id="audio-status">Microphone: Inactive</div>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">Sound Output</label>
+                    <button class="button" id="sound-btn">Enable Sound</button>
+                    <input type="range" id="volume-slider" class="slider" min="0" max="0.3" value="0.1" step="0.01">
+                    <div class="value-display" id="volume-value">Volume: 10%</div>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">Frequency Presets</label>
+                    <div>
+                        <button class="preset-button" onclick="setFrequency(110)">110 Hz</button>
+                        <button class="preset-button" onclick="setFrequency(174)">174 Hz</button>
+                        <button class="preset-button" onclick="setFrequency(285)">285 Hz</button>
+                        <button class="preset-button" onclick="setFrequency(396)">396 Hz</button>
+                        <button class="preset-button" onclick="setFrequency(432)">432 Hz</button>
+                        <button class="preset-button" onclick="setFrequency(528)">528 Hz</button>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">Mode</label>
+                    <div>
+                        <button class="button active" id="realtime-btn">Real-time</button>
+                        <button class="button" id="snapshot-btn">Snapshot</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="info">
+            <div><strong>Controls:</strong></div>
+            <div>Left Click + Drag: Rotate</div>
+            <div>Right Click + Drag: Pan</div>
+            <div>Scroll: Zoom</div>
+            <div>Particles: <span id="particle-count">0</span></div>
+        </div>
+        
+        <div class="help-toggle" id="help-toggle">?</div>
+        
+        <div class="help-panel" id="help-panel">
+            <h3>About 3D Cymatics</h3>
+            <p>Cymatics is the study of visible sound and vibration. This simulator demonstrates how sound frequencies create geometric patterns in 3D space.</p>
+            
+            <h3>How to Use</h3>
+            <ul>
+                <li><strong>Frequency:</strong> Adjust the vibration frequency (20-500 Hz)</li>
+                <li><strong>Amplitude:</strong> Control the intensity of vibration</li>
+                <li><strong>Boundary Shape:</strong> Choose between plate, sphere, or cube</li>
+                <li><strong>Audio Input:</strong> Use your microphone for real-time audio visualization</li>
+                <li><strong>Presets:</strong> Try known frequencies that create interesting patterns</li>
+            </ul>
+            
+            <h3>Camera Controls</h3>
+            <ul>
+                <li><strong>Rotate:</strong> Left click and drag</li>
+                <li><strong>Pan:</strong> Right click and drag</li>
+                <li><strong>Zoom:</strong> Mouse wheel</li>
+            </ul>
+            
+            <h3>Physics Model</h3>
+            <p>The simulation uses a 3D wave equation to calculate standing wave patterns. Particles settle at nodal points where vibration is minimal, creating the characteristic cymatic patterns.</p>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let scene, camera, renderer, controls;
+        let particles, particleSystem;
+        let animationId;
+        let isRunning = false;
+        let currentFrequency = 100;
+        let currentAmplitude = 1.0;
+        let boundaryShape = 'plate';
+        let mode = 'realtime';
+        let audioContext, analyser, microphone;
+        let audioEnabled = false;
+        let frequencyData;
+        
+        // Sound generation variables
+        let oscillator, gainNode;
+        let soundEnabled = false;
+        let masterVolume = 0.1;
+        
+        // Camera control variables
+        let mouseX = 0, mouseY = 0;
+        let isMouseDown = false;
+        let cameraAngle = 0;
+        let cameraElevation = Math.PI / 4;
+        let cameraDistance = 20;
+        
+        // Physics parameters
+        const gridSize = 128; // Increased from 64 to 128 (4x more particles)
+        const particleCount = gridSize * gridSize;
+        const plateSize = 10;
+        let time = 0;
+        
+        // Initialize the application
+        function init() {
+            setupScene();
+            setupParticles();
+            setupControls();
+            setupEventListeners();
+            setupAudio();
+            
+            // Start the animation loop
+            animate();
+        }
+        
+        // Set up the Three.js scene
+        function setupScene() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000000);
+            
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            updateCameraPosition();
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            
+            // Setup manual camera controls
+            setupCameraControls();
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 5);
+            scene.add(directionalLight);
+            
+            const pointLight = new THREE.PointLight(0x3b82f6, 1, 100);
+            pointLight.position.set(0, 10, 0);
+            scene.add(pointLight);
+            
+            // Add boundary visualization
+            addBoundaryVisualization();
+        }
+        
+        // Set up manual camera controls
+        function setupCameraControls() {
+            const canvas = renderer.domElement;
+            
+            canvas.addEventListener('mousedown', onMouseDown);
+            canvas.addEventListener('mousemove', onMouseMove);
+            canvas.addEventListener('mouseup', onMouseUp);
+            canvas.addEventListener('wheel', onMouseWheel);
+            canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+        }
+        
+        function onMouseDown(event) {
+            isMouseDown = true;
+            mouseX = event.clientX;
+            mouseY = event.clientY;
+        }
+        
+        function onMouseMove(event) {
+            if (!isMouseDown) return;
+            
+            const deltaX = event.clientX - mouseX;
+            const deltaY = event.clientY - mouseY;
+            
+            cameraAngle -= deltaX * 0.01;
+            cameraElevation = Math.max(0.1, Math.min(Math.PI - 0.1, cameraElevation - deltaY * 0.01));
+            
+            updateCameraPosition();
+            
+            mouseX = event.clientX;
+            mouseY = event.clientY;
+        }
+        
+        function onMouseUp() {
+            isMouseDown = false;
+        }
+        
+        function onMouseWheel(event) {
+            cameraDistance = Math.max(5, Math.min(50, cameraDistance + event.deltaY * 0.01));
+            updateCameraPosition();
+        }
+        
+        function updateCameraPosition() {
+            const x = cameraDistance * Math.sin(cameraElevation) * Math.cos(cameraAngle);
+            const y = cameraDistance * Math.cos(cameraElevation);
+            const z = cameraDistance * Math.sin(cameraElevation) * Math.sin(cameraAngle);
+            
+            camera.position.set(x, y, z);
+            camera.lookAt(0, 0, 0);
+        }
+        // Set up the particle system
+        function setupParticles() {
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            
+            let index = 0;
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    const x = (i / (gridSize - 1)) * plateSize - plateSize / 2;
+                    const z = (j / (gridSize - 1)) * plateSize - plateSize / 2;
+                    
+                    positions[index * 3] = x;
+                    positions[index * 3 + 1] = 0;
+                    positions[index * 3 + 2] = z;
+                    
+                    // Initial color (blue)
+                    colors[index * 3] = 0.2;
+                    colors[index * 3 + 1] = 0.5;
+                    colors[index * 3 + 2] = 1.0;
+                    
+                    index++;
+                }
+            }
+            
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            
+            const material = new THREE.PointsMaterial({
+                size: 0.05, // Reduced from 0.1 to 0.05 for finer detail
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.9, // Slightly increased opacity for better visibility
+                blending: THREE.AdditiveBlending
+            });
+            
+            particleSystem = new THREE.Points(geometry, material);
+            scene.add(particleSystem);
+            
+            particles = positions;
+            
+            // Update particle count display
+            document.getElementById('particle-count').textContent = particleCount;
+        }
+        
+        // Add boundary visualization
+        function addBoundaryVisualization() {
+            // Remove existing boundary
+            const existingBoundary = scene.getObjectByName('boundary');
+            if (existingBoundary) {
+                scene.remove(existingBoundary);
+            }
+            
+            let boundaryGeometry;
+            
+            switch (boundaryShape) {
+                case 'plate':
+                    boundaryGeometry = new THREE.PlaneGeometry(plateSize, plateSize);
+                    break;
+                case 'sphere':
+                    boundaryGeometry = new THREE.SphereGeometry(plateSize / 2, 32, 16);
+                    break;
+                case 'cube':
+                    boundaryGeometry = new THREE.BoxGeometry(plateSize, plateSize, plateSize);
+                    break;
+            }
+            
+            const boundaryMaterial = new THREE.MeshBasicMaterial({
+                color: 0x333333,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.3
+            });
+            
+            const boundary = new THREE.Mesh(boundaryGeometry, boundaryMaterial);
+            boundary.name = 'boundary';
+            boundary.position.y = boundaryShape === 'plate' ? -0.5 : 0;
+            scene.add(boundary);
+        }
+        
+        // Set up UI controls
+        function setupControls() {
+            const frequencySlider = document.getElementById('frequency-slider');
+            const amplitudeSlider = document.getElementById('amplitude-slider');
+            const frequencyValue = document.getElementById('frequency-value');
+            const amplitudeValue = document.getElementById('amplitude-value');
+            
+            frequencySlider.addEventListener('input', (e) => {
+                currentFrequency = parseFloat(e.target.value);
+                frequencyValue.textContent = currentFrequency + ' Hz';
+            });
+            
+            amplitudeSlider.addEventListener('input', (e) => {
+                currentAmplitude = parseFloat(e.target.value);
+                amplitudeValue.textContent = currentAmplitude.toFixed(1);
+            });
+        }
+        
+        // Set up event listeners
+        function setupEventListeners() {
+            // Boundary shape buttons
+            document.getElementById('plate-btn').addEventListener('click', () => setBoundaryShape('plate'));
+            document.getElementById('sphere-btn').addEventListener('click', () => setBoundaryShape('sphere'));
+            document.getElementById('cube-btn').addEventListener('click', () => setBoundaryShape('cube'));
+            
+            // Simulation controls
+            document.getElementById('start-btn').addEventListener('click', startSimulation);
+            document.getElementById('pause-btn').addEventListener('click', pauseSimulation);
+            document.getElementById('reset-btn').addEventListener('click', resetSimulation);
+            
+            // Audio controls
+            document.getElementById('audio-btn').addEventListener('click', toggleAudio);
+            
+            // Sound controls
+            document.getElementById('sound-btn').addEventListener('click', toggleSound);
+            
+            // Mode buttons
+            document.getElementById('realtime-btn').addEventListener('click', () => setMode('realtime'));
+            document.getElementById('snapshot-btn').addEventListener('click', () => setMode('snapshot'));
+            
+            // Help toggle
+            document.getElementById('help-toggle').addEventListener('click', toggleHelp);
+            
+            // Collapse toggle
+            document.getElementById('collapse-toggle').addEventListener('click', toggleControls);
+            
+            // Window resize
+            window.addEventListener('resize', onWindowResize);
+        }
+        
+        // Set up audio context and analyser
+        function setupAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                frequencyData = new Uint8Array(analyser.frequencyBinCount);
+                
+                // Set up sound generation
+                setupSoundGeneration();
+            } catch (error) {
+                console.error('Audio setup failed:', error);
+            }
+        }
+        
+        // Set up sound generation system
+        function setupSoundGeneration() {
+            // Create gain node for volume control
+            gainNode = audioContext.createGain();
+            gainNode.gain.value = 0; // Start silent
+            gainNode.connect(audioContext.destination);
+        }
+        
+        // Toggle sound generation
+        function toggleSound() {
+            if (!soundEnabled) {
+                try {
+                    // Resume audio context if suspended (required by browser policies)
+                    if (audioContext.state === 'suspended') {
+                        audioContext.resume();
+                    }
+                    
+                    startSoundGeneration();
+                    soundEnabled = true;
+                    document.getElementById('sound-btn').textContent = 'Disable Sound';
+                    document.getElementById('sound-btn').classList.add('active');
+                } catch (error) {
+                    console.error('Sound generation failed:', error);
+                    alert('Sound generation failed. Please try again.');
+                }
+            } else {
+                stopSoundGeneration();
+                soundEnabled = false;
+                document.getElementById('sound-btn').textContent = 'Enable Sound';
+                document.getElementById('sound-btn').classList.remove('active');
+            }
+        }
+        
+        // Start sound generation
+        function startSoundGeneration() {
+            if (oscillator) {
+                oscillator.stop();
+                oscillator.disconnect();
+            }
+            
+            oscillator = audioContext.createOscillator();
+            oscillator.type = 'sine'; // Pure sine wave for clean tone
+            oscillator.frequency.value = currentFrequency;
+            oscillator.connect(gainNode);
+            oscillator.start();
+            
+            // Set volume based on current settings and simulation state
+            updateSoundVolume();
+        }
+        
+        // Stop sound generation
+        function stopSoundGeneration() {
+            if (oscillator) {
+                gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.1);
+                oscillator.disconnect();
+                oscillator = null;
+            }
+        }
+        
+        // Update oscillator frequency
+        function updateOscillatorFrequency() {
+            if (oscillator && soundEnabled) {
+                oscillator.frequency.setValueAtTime(currentFrequency, audioContext.currentTime);
+            }
+        }
+        
+        // Update sound volume
+        function updateSoundVolume() {
+            if (gainNode && soundEnabled) {
+                // Volume is controlled by master volume and simulation state
+                const targetVolume = isRunning ? masterVolume : 0;
+                gainNode.gain.setValueAtTime(targetVolume, audioContext.currentTime);
+            }
+        }
+        
+        // Toggle audio input
+        async function toggleAudio() {
+            if (!audioEnabled) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    microphone = audioContext.createMediaStreamSource(stream);
+                    microphone.connect(analyser);
+                    
+                    audioEnabled = true;
+                    document.getElementById('audio-btn').textContent = 'Disable Microphone';
+                    document.getElementById('audio-btn').classList.add('active');
+                    document.getElementById('audio-status').textContent = 'Microphone: Active';
+                    document.getElementById('audio-status').classList.remove('inactive');
+                    document.getElementById('audio-status').classList.add('active');
+                } catch (error) {
+                    console.error('Microphone access denied:', error);
+                    alert('Microphone access denied. Please allow microphone access and try again.');
+                }
+            } else {
+                if (microphone) {
+                    microphone.disconnect();
+                    microphone = null;
+                }
+                
+                audioEnabled = false;
+                document.getElementById('audio-btn').textContent = 'Enable Microphone';
+                document.getElementById('audio-btn').classList.remove('active');
+                document.getElementById('audio-status').textContent = 'Microphone: Inactive';
+                document.getElementById('audio-status').classList.remove('active');
+                document.getElementById('audio-status').classList.add('inactive');
+            }
+        }
+        
+        // Set frequency from preset
+        function setFrequency(frequency) {
+            currentFrequency = frequency;
+            document.getElementById('frequency-slider').value = frequency;
+            document.getElementById('frequency-value').textContent = frequency + ' Hz';
+            updateOscillatorFrequency();
+        }
+        
+        // Set boundary shape
+        function setBoundaryShape(shape) {
+            boundaryShape = shape;
+            
+            // Update button states
+            document.querySelectorAll('#controls .button').forEach(btn => {
+                if (btn.id.includes('-btn') && btn.id !== 'start-btn' && btn.id !== 'pause-btn' && btn.id !== 'reset-btn' && btn.id !== 'audio-btn') {
+                    btn.classList.remove('active');
+                }
+            });
+            document.getElementById(shape + '-btn').classList.add('active');
+            
+            addBoundaryVisualization();
+            resetSimulation();
+        }
+        
+        // Set simulation mode
+        function setMode(newMode) {
+            mode = newMode;
+            
+            // Update button states
+            document.getElementById('realtime-btn').classList.toggle('active', mode === 'realtime');
+            document.getElementById('snapshot-btn').classList.toggle('active', mode === 'snapshot');
+        }
+        
+        // Start simulation
+        function startSimulation() {
+            isRunning = true;
+            document.getElementById('start-btn').classList.add('active');
+            document.getElementById('pause-btn').classList.remove('active');
+            updateSoundVolume(); // Enable sound when simulation starts
+        }
+        
+        // Pause simulation
+        function pauseSimulation() {
+            isRunning = false;
+            document.getElementById('start-btn').classList.remove('active');
+            document.getElementById('pause-btn').classList.add('active');
+            updateSoundVolume(); // Mute sound when simulation pauses
+        }
+        
+        // Reset simulation
+        function resetSimulation() {
+            time = 0;
+            isRunning = false;
+            document.getElementById('start-btn').classList.remove('active');
+            document.getElementById('pause-btn').classList.remove('active');
+            
+            // Reset particles to initial positions
+            const positions = particleSystem.geometry.attributes.position.array;
+            let index = 0;
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    const x = (i / (gridSize - 1)) * plateSize - plateSize / 2;
+                    const z = (j / (gridSize - 1)) * plateSize - plateSize / 2;
+                    
+                    positions[index * 3] = x;
+                    positions[index * 3 + 1] = 0;
+                    positions[index * 3 + 2] = z;
+                    
+                    index++;
+                }
+            }
+            
+            particleSystem.geometry.attributes.position.needsUpdate = true;
+        }
+        
+        // Toggle controls panel
+        function toggleControls() {
+            const controls = document.getElementById('controls');
+            const toggle = document.getElementById('collapse-toggle');
+            
+            if (controls.classList.contains('collapsed')) {
+                controls.classList.remove('collapsed');
+                toggle.textContent = '−';
+            } else {
+                controls.classList.add('collapsed');
+                toggle.textContent = '+';
+            }
+        }
+        
+        // Toggle help panel
+        function toggleHelp() {
+            const helpPanel = document.getElementById('help-panel');
+            helpPanel.style.display = helpPanel.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        // Handle window resize
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // Calculate wave displacement based on physics
+        function calculateWaveDisplacement(x, z, frequency, amplitude, time) {
+            const waveSpeed = 343; // Speed of sound in air (m/s)
+            const wavelength = waveSpeed / frequency;
+            const k = 2 * Math.PI / wavelength;
+            
+            let displacement = 0;
+            
+            switch (boundaryShape) {
+                case 'plate':
+                    // Standing wave pattern for a rectangular plate
+                    const nx = 2; // Number of nodes in x direction
+                    const nz = 2; // Number of nodes in z direction
+                    displacement = amplitude * Math.sin(nx * Math.PI * (x + plateSize/2) / plateSize) * 
+                                  Math.sin(nz * Math.PI * (z + plateSize/2) / plateSize) * 
+                                  Math.cos(2 * Math.PI * frequency * time);
+                    break;
+                    
+                case 'sphere':
+                    // Spherical harmonics approximation
+                    const r = Math.sqrt(x*x + z*z);
+                    const theta = Math.atan2(z, x);
+                    displacement = amplitude * Math.sin(k * r) * Math.cos(3 * theta) * Math.cos(2 * Math.PI * frequency * time);
+                    break;
+                    
+                case 'cube':
+                    // 3D standing wave in a cube
+                    displacement = amplitude * Math.sin(k * x) * Math.sin(k * z) * Math.cos(2 * Math.PI * frequency * time);
+                    break;
+            }
+            
+            return displacement;
+        }
+        
+        // Update particles based on physics
+        function updateParticles() {
+            if (!isRunning && mode === 'realtime') return;
+            
+            const positions = particleSystem.geometry.attributes.position.array;
+            const colors = particleSystem.geometry.attributes.color.array;
+            
+            // Get frequency from audio if enabled
+            let effectiveFrequency = currentFrequency;
+            let effectiveAmplitude = currentAmplitude;
+            
+            if (audioEnabled && analyser) {
+                analyser.getByteFrequencyData(frequencyData);
+                
+                // Calculate dominant frequency and amplitude from audio
+                let maxAmplitude = 0;
+                let dominantFrequency = 0;
+                
+                for (let i = 0; i < frequencyData.length; i++) {
+                    if (frequencyData[i] > maxAmplitude) {
+                        maxAmplitude = frequencyData[i];
+                        dominantFrequency = i * (audioContext.sampleRate / 2) / frequencyData.length;
+                    }
+                }
+                
+                if (maxAmplitude > 50) { // Threshold for audio input
+                    effectiveFrequency = Math.max(20, Math.min(500, dominantFrequency));
+                    effectiveAmplitude = (maxAmplitude / 255) * 3.0;
+                }
+            }
+            
+            let index = 0;
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    const x = (i / (gridSize - 1)) * plateSize - plateSize / 2;
+                    const z = (j / (gridSize - 1)) * plateSize - plateSize / 2;
+                    
+                    // Calculate wave displacement
+                    const displacement = calculateWaveDisplacement(x, z, effectiveFrequency, effectiveAmplitude, time);
+                    
+                    // Update particle position
+                    positions[index * 3] = x;
+                    positions[index * 3 + 1] = displacement;
+                    positions[index * 3 + 2] = z;
+                    
+                    // Update particle color based on displacement
+                    const colorIntensity = Math.abs(displacement) / effectiveAmplitude;
+                    colors[index * 3] = 0.2 + colorIntensity * 0.8; // Red component
+                    colors[index * 3 + 1] = 0.5 + colorIntensity * 0.5; // Green component
+                    colors[index * 3 + 2] = 1.0 - colorIntensity * 0.5; // Blue component
+                    
+                    index++;
+                }
+            }
+            
+            particleSystem.geometry.attributes.position.needsUpdate = true;
+            particleSystem.geometry.attributes.color.needsUpdate = true;
+        }
+        
+        // Animation loop
+        function animate() {
+            animationId = requestAnimationFrame(animate);
+            
+            if (isRunning || mode === 'snapshot') {
+                time += 0.003;
+                updateParticles();
+            }
+            
+            renderer.render(scene, camera);
+        }
+        
+        // Start the application
+        init();
+    </script>
+</body>
+</html>
