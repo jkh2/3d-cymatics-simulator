@@ -15,7 +15,7 @@ An interactive web-based application that demonstrates the fascinating physics o
 
 ## 🚀 Try It Live
 
-**[Launch the Simulator](https://yourusername.github.io/3d-cymatics-simulator/)**
+**[Launch the Simulator](https://jkh2.github.io/3d-cymatics-simulator/)**
 
 ## 🎮 How to Use
 
