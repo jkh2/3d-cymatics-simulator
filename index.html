@@ -1149,9 +1149,9 @@
             
             switch (boundaryShape) {
                 case 'plate':
-                    // Standing wave pattern for a rectangular plate
-                    const nx = 2; // Number of nodes in x direction
-                    const nz = 2; // Number of nodes in z direction
+                    // Standing wave pattern for a rectangular plate - single mode
+                    const nx = 1; // Single mode in x direction
+                    const nz = 1; // Single mode in z direction
                     displacement = amplitude * Math.sin(nx * Math.PI * (x + plateSize/2) / plateSize) * 
                                   Math.sin(nz * Math.PI * (z + plateSize/2) / plateSize) * 
                                   Math.cos(2 * Math.PI * frequency * time);
